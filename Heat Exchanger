@@ -1,0 +1,358 @@
+%deltaTlm=((T1i-T2i)-(T1o-T2o))/log((T1i-T2i)/(T1o-T2o)) for parallel
+%deltaTlm=((T1i-T2o)-(T1o-T2i))/log((T1i-T2o)/(T1o-T2i)) for counter flow
+ 
+%-------------------------------------------------------------------------
+%Design requirements 
+ 
+%Engine oil outlet must be less than or equal to 100 degrees
+%Pressure drop on oil side <= 10 bar or 1 MPa
+%Pressure drop on water side = 5 bar
+%Max T_oil = 100 deg.C
+%Max T_water = 30 deg.C
+% group 10
+ 
+clc; clear all
+%case A 
+%oil
+m_oil=0.8;
+cp1=2307;%J/kgK
+T1i=100+273; %Kelvin 
+Required_T1o=100+273;
+k1=0.135; %W/m.K
+miu1=1.027*(10^-2); %N.s/m^2
+PR1=175;
+rho1=828; %kg/m^3
+%Rf1=0.176*10^-3; %m^2*k/W
+Rf1 = 0;
+upperrange1=1;
+lowerrange1=0.5;
+ 
+%-------------------------------------------------------------------------
+ 
+%water
+m_water=1.2;
+cp2=4188;%J/kgK
+T2i=15+273; %Kelvin
+Required_T2o=30+273;
+k2=0.58943; %W/m.K
+miu2=0.11375*(10^-2); %N.s/m^2
+PR2=miu2*cp2/k2;
+rho2=999.15; %kg/m^3
+%Rf2=0.353*10^-3;%m^2*k/W
+Rf2 = 0;
+upperrange2=2.8;
+lowerrange2=1.2;
+ 
+%-------------------------------------------------------------------------
+ 
+%Parameters
+pitch_shape=2; %*** Square pitch=1 / Triangular Pitch =2
+kw=42.7; %W/m.K
+Ds=50.8*10^-3; %Shell inside diameter (m) 
+Lt=2*508*10^-3; %Tube length (m)
+do=6.3*10^-3; %Tube outside diameter
+dr=1.3; %Given Diameter ratio where dr=do/di 
+di=(1/dr)*do; %Tube inner diameter (m)
+fprintf('Tube inner diameter(m)=%',di)
+disp(di)
+Np=2; %Number of passes (defined)
+B=40.6*10^-3; %Baffling space (Assumed)(m)
+Nb=Lt/B-1; %Number of Baffles
+fprintf('Number of Baffles=%',Nb)
+disp(Nb)
+ 
+%Tube pitch ratio Pr where Pr=Pt/do 
+%Pt= tube pitch
+Pr=1.25; %Given tube pitch ratio
+Pt=Pr*do; %Obtain tube pitch
+fprintf('Tube pitch(m)=%',Pt)
+disp(Pt)
+ 
+%-------------------------------------------------------------------------
+ 
+%Tube Clearance
+Ct=Pt-do; %Tube clearance (mm)
+fprintf('Tube clearance(m)=%',Ct)
+disp(Ct)
+ 
+%tube count calculation constants CTP 
+%To estimate the number of tubes
+Nt=[0 0 0]';
+CTP=[0.93 0.9 0.85]';
+if pitch_shape==1 %Square pitch layout
+    CL=1;
+end
+if pitch_shape==2 %triangular pitch layout
+    CL=0.866;
+end
+%Constant pitch layout
+for i=1:3
+    ShadeArea=CL*Pt^2;
+    Nt(i)=CTP(i)*((pi*Ds^2/4)/ShadeArea);
+end
+%disp(Nt)
+Nt=round(Nt(Np));
+fprintf('Number of tubes needed=%',Nt)
+disp(Nt)
+ 
+%-------------------------------------------------------------------------
+ 
+%Tube side cross flow area / velocity/ reynolds number for engine oil
+Ac1=(pi*(di)^2/4)*(Nt/Np); %Cross-flow area (m^2) 
+v1=m_oil/(rho1*Ac1); %velocity ms-1
+RE1=(rho1*v1*(di))/miu1; %Reynolds number
+fprintf('Engine oil cross flow area=%',Ac1)
+disp(Ac1)
+fprintf('Engine oil velocity=%',v1)
+disp(v1)
+fprintf('Engine oil Reynolds number=%',RE1)
+disp(RE1)
+ 
+%Varify
+if RE1<2300
+    disp('Laminar flow')
+else
+    disp('turbulent flow')
+end
+ 
+if v1<upperrange1
+    disp('Velocity within range')
+    if v1<lowerrange1
+        disp('Velocity lower than range')
+        if v1<lowerrange1/2
+            dis('Velcity is too low')
+        end
+    end
+    if v1>upperrange1
+        disp('Velocity higher than range')
+    end
+end
+ 
+%Friction factor
+if RE1<2300
+    fricfac=16/RE1;
+else
+    fricfac=(1.58*log(RE1)-3.28)^2;
+end
+fprintf('Friction Factor for engine oil=%',fricfac)
+disp(fricfac);
+ 
+%Nusselt number
+if RE1>2300
+    Nu1=(fricfac/2)*((RE1-1000)*PR1)/(1+12.7*((fricfac/2)^0.5)*(PR1^(2/3)-1));
+else
+    Nu1=1.86*((di*RE1*PR1)/Lt)^(1/3);
+end
+fprintf('Nusselt number=%',Nu1)
+disp(Nu1);
+ 
+%Convection heat tranfer coefficient
+h1=(Nu1*k1)/di;
+fprintf('Convection heat transfer coefficient h (W/m^2*k)=%',h1)
+disp(h1);
+ 
+%-------------------------------------------------------------------------
+ 
+%Shell side free flow area / velocity
+Ac2=(Ds*Ct*B)/Pt;
+fprintf('free flow area(m^2)=%',Ac2);
+disp(Ac2)
+v2=m_water/(rho2*Ac2);
+fprintf('Velocity of Coolant(ms-1)=%',v2);
+disp(v2)
+ 
+%Varify
+if v2<upperrange2
+    disp('Velocity within range')
+    if v2<lowerrange2
+        disp('Velocity lower than range')
+        if v2<lowerrange2/2
+            dis('Velcity is too low')
+        end
+    end
+    if v2>upperrange2
+        disp('Velocity higher than range')
+    end
+end
+ 
+%Equivalent diameter 
+ if pitch_shape==1 %Square pitch layout
+     De=4*(Pt^2-pi*(do^2)/4)/pi*do;
+ end
+ if pitch_shape==2 %triangular pitch layout
+     De=4*(((Pt^2*sqrt(3)/4)-(pi*do^2/8))/(pi*do/2));
+ end
+ fprintf('Equivalent Diameter (m)=%',De);
+ disp(De)
+ 
+%Reynolds number for engine coolant
+RE2=(rho2*v2*De)/miu2;
+fprintf('Reynolds number for engine coolant=%',RE2);
+disp(RE2)
+ 
+%Friction factor 2 
+fricfac2= exp(0.576-0.19*log(RE2));
+fprintf('Friction Factor2 for coolant=%',fricfac2)
+disp(fricfac2);
+ 
+ 
+%Nusselt number
+if RE2>2000
+    if RE2<1*10^6
+    Nu2=0.36*(RE2^0.55)*(PR2^(1/3));
+    end
+end
+fprintf('Nusselt number2=%',Nu2)
+disp(Nu2);
+ 
+%Heat transfer coefficient
+h2=(Nu2*k2)/De;
+fprintf('Heat transfer coefficient for engine coolant h (W/m^2*k)=%',h2);
+disp(h2)
+ 
+%-------------------------------------------------------------------------
+ 
+%Total heat transfer areas for both fluids 
+Ai=pi*di*Lt*Nt;
+Ao=pi*do*Lt*Nt;
+fprintf('Total heat transfer inner area (m^2) =%',Ai);
+disp(Ai)
+fprintf('Total heat transfer outer area (m^2)=%',Ao);
+disp(Ao)
+ 
+%The overall heat transfer coefficient UAo
+a=1/(h1*Ai);
+b=Rf1/Ai;
+c=log(do/di)/(2*pi*kw*Lt*Nt);
+d=Rf2/Ao;
+e=1/(h2*Ao);
+ 
+UAo=1/(a+b+c+d+e);
+fprintf('Overall heat transfer coefficient (W/K)=%',UAo);
+disp(UAo)
+ 
+%-------------------------------------------------------------------------
+ 
+%Heat capacities for both fluids
+C1=m_oil*cp1;
+C2=m_water*cp2;
+Cmin=min(C1, C2);
+Cmax=max(C1, C2);
+fprintf('Heat capacity for oil=%',C1);
+disp(C1)
+fprintf('Heat capacity for water=%',C2);
+disp(C2)
+%Heat capacity ratio
+Cr=Cmin/Cmax;
+fprintf('Heat capacity ratio=%',Cr);
+disp(Cr)
+%Number of transfer units
+NTU=UAo/Cmin;
+fprintf('Number of transfer units(NTU)=%',NTU);
+disp(NTU)
+%Effectiveness for a shell and tube heat exchanger
+NTU1=NTU/Np;
+Ehx1=2*(1+Cr+(1+Cr^2)^0.5*((1+exp(-NTU1*(1+Cr^2)^0.5))/(1-exp(-NTU1*(1+Cr^2)^0.5))))^-1;
+Ehx=(((1 - Ehx1*Cr)/(1-Ehx1))^Np - 1)*(((1 - Ehx1*Cr)/(1-Ehx1))^Np - Cr)^(-1);
+fprintf('effectiveness Ehx=%',Ehx);
+disp(Ehx)
+ 
+%Effectiveness maybe expressed as
+%        q          C1*(T1i-T1o)       C2*(T2o-T2i)
+%Ehx= ------- = ------------------ = ----------------
+%      qmax        Cmin*(T1i-T2i)      Cmin(T1i-T2i)
+ 
+%Comparison with the outlet temperatures
+T1o=T1i-Ehx*(Cmin/C1)*(T1i-T2i);
+T2o=T2i+Ehx*(Cmin/C2)*(T1i-T2i);
+fprintf('Calculated outlet temperature of oil (Kelvin)=%',T1o);
+disp(T1o)
+fprintf('Calculated outlet temperature of water (Kelvin)=%',T2o);
+disp(T2o)
+fprintf('Calculated outlet temperature of oil (degrees C)=%',T1o);
+disp(T1o-273)
+fprintf('Calculated outlet temperature of water (degrees C)=%',T2o);
+disp(T2o-273)
+RndT1o=round(T1o);
+ 
+if RndT1o>Required_T1o-2
+    if RndT1o<Required_T1o+2
+        disp('Outlet temperature Requirement satisfied')
+    else
+        disp('Outlet temperature Requirement not satisfied')
+    end
+end
+ 
+%Heat transfer rate
+q=Ehx*Cmin*(T1i-T2i);
+fprintf('Overall heat transfer (W)=%',q);
+disp(q)
+ 
+%Pressure drops 
+deltaP1=4*(fricfac*Lt/di+1)*Np*0.5*rho1*v1^2;
+deltaP2=fricfac2*(Ds/De)*(Nb+1)*0.5*rho2*v2^2;
+fprintf('Pressure drop of oil delta P1 (Pa)=%',deltaP1);
+disp(deltaP1)
+fprintf('Pressure drop of water delta P2 (Pa)=%',deltaP2);
+disp(deltaP2)
+ 
+%Surface density
+beta=(Ao+Ai)/((pi*Ds*2/4)*Lt);
+fprintf('Surface density=%',beta);
+disp(beta)
+ 
+clc
+%-------------------------------------------------------------------------
+disp('Default Input')
+fprintf('Oil inlet temperature (Kelvin)=%',T1i);
+disp(T1i)
+fprintf('Water inlet temperature=%',T2i);
+disp(T2i)
+fprintf('Oil Mass flow rate=%',m_oil);
+disp(m_oil)
+fprintf('Water mass flow rate=%',m_water);
+disp(m_water)
+% fprintf('Fouling factor of engine oil=%',Rf1);
+% disp(Rf1)
+% fprintf('Fouling factor of engine oil=%',Rf2);
+% disp(Rf2)
+disp('---------------------------------------------')
+disp('Requirements')
+fprintf('Oil requirement outlet temperature (K)=%',Required_T1o);
+disp(Required_T1o)
+fprintf('Water requirement outlet temperature (K)=%',Required_T2o);
+disp(Required_T2o)
+disp('---------------------------------------------')
+disp('Desgin specification')
+fprintf('Number of Passes=%',Np);
+disp(Np)
+fprintf('Shell inner diameter(m)=%',Ds);
+disp(Ds)
+fprintf('Tube Outer diameter(m)=%',do);
+disp(do)
+fprintf('Tube Inner diameter(m)=%',di);
+disp(di)
+fprintf('Tube length(m)=%',Lt);
+disp(Lt)
+fprintf('Number of tubes=%',Nt);
+disp(Nt)
+fprintf('Tube Clearance(m)=%',Ct);
+disp(Ct)
+fprintf('Baffle Spacing(m)=%',B);
+disp(B)
+fprintf('Number of Baffles=%',Nb);
+disp(Nb)
+fprintf('Oil outlet temperature(Celsius)=%',round(T1o-273));
+disp(round(T1o-273))
+fprintf('Water outlet temperature(Celsius)=%',round(T2o-273));
+disp(round(T2o-273))
+fprintf('Heat transfer rate(kW)=%',q*0.001);
+disp(q*0.001)
+fprintf('Surface area density (m^2/m^3)=%',beta);
+disp(beta)
+fprintf('Pressure drop of oil delta P1 (bar)=%',deltaP1*10^(-5));
+disp(deltaP1*10^(-5))
+fprintf('Pressure drop of water delta P2 (bar)=%',deltaP2*10^(-5));
+disp(deltaP2*10^(-5))
+fprintf('Over heat transfer coefficient UA =%',UAo);
+disp(UAo)
