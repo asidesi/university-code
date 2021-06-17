@@ -1,0 +1,158 @@
+%% Initialisation
+dt=0.01;
+lt=5/dt+1;
+dx=2*pi/100;
+dy=2*pi/100;
+a=0.1;
+B=0.1;
+L=4*pi;
+H=2*pi;
+n=round(L/dx) +1;
+m=round(H/dy) +1;   
+%% setting up x vector 
+x=zeros(n,1);
+for i=1:n
+    x(i)=(i-1)*dx;
+end
+%% setting up y vector
+y=zeros(m,1);
+for j=1:m
+    y(j)=(j-1)*dy;
+end
+%% Initial Condition 
+for i=1:n
+    for j=1:m
+        T(i,j,1)=20*cos((i-1)*dx)*sin((j-1)*dy);
+    end
+end
+%%  Realisations - seeting up t vector
+t=zeros(lt,1);
+for k=1:lt
+T(k)=(k-1)*dt;
+end
+%% Time Loop for velocity distribution
+v=zeros(n,m,lt);
+for i=1:n
+for k=2:lt
+    V(i,k)=5*(1-(x(i)-2*pi)^2/(4*pi^2))*cos(pi*t(k))*sin(x(i));
+end
+ 
+end
+%% Discretisation
+as=((-B*(dt/dy^2)) + V*(dt/2*dy));
+aw=(-a*dt/dx^2);
+ap=(1+2*a*(dt/dx^2)+2*B*(dt/dy^2));
+an=((-B*(dt/dy^2))-V*(dt/2*dy));
+ae=(-a*(dt/dx^2));
+ 
+for k=2:lt
+%% T1
+for i=2:n-1
+    for j=2:m-1
+        pointer=(j-1)*n+i;
+        A(pointer,pointer-n)=as(i,k); 
+        A(pointer,pointer-1)=aw;
+        A(pointer, pointer)=ap;
+        A(pointer,pointer+1)=ae;
+        A(pointer,pointer+n)=an(i,k);
+    end
+end
+ 
+%% T2
+for i=1
+    for j=2:m-1
+        pointer=(j-1)*n+i;
+        A(pointer,pointer)=ap;
+        A(pointer,pointer+1)=(aw+ae);
+        A(pointer,pointer+n)=an(i,k);
+        A(pointer,pointer-n)=as(i,k);
+    end
+end
+ 
+%% T3
+for i=n
+    for j=2:m-1
+         pointer=(j-1)*n+i;
+        A(pointer, pointer)=ap; 
+        A(pointer, pointer-1)=(aw+ae);
+        A(pointer, pointer-n)=as(i,k);
+        A(pointer, pointer+n)=an(i,k);
+    end
+end
+%% T4
+for i=2:n-1
+    for j=1
+        pointer=(j-1)*n+i;
+        A(pointer,pointer)=ap;
+        A(pointer,pointer+(m-2)*n)=as(i,k);
+        A(pointer,pointer-1)=aw;
+        A(pointer,pointer+1)=ae;
+        A(pointer,pointer+n)=an(i,k);
+    end
+end
+ 
+%% T5
+for i=2:n-1
+    for j=m
+        pointer=(j-1)*n+i;
+         A(pointer,pointer-m)=as(i,k);
+         A(pointer,pointer-1)=aw;
+         A(pointer,pointer)=ap;
+         A(pointer,pointer+1)=ae;
+         A(pointer,pointer-(m+2)*n)=an(i,k);
+    end
+end
+ 
+%% T6
+for i=1
+    for j=1
+        pointer=(j-1)*n+i;
+        A(pointer,pointer+1)=(aw+ae);
+        A(pointer,pointer+(m-2)*n)=as(i,k);
+        A(pointer,pointer)=ap;
+        A(pointer,pointer+n)=an(i,k);
+    end
+end
+ 
+%% T7
+for i=n
+    for j=1
+        pointer=(j-1)*n+i;
+          A(pointer,pointer+(m-2)*n)=as(i,k);
+          A(pointer,pointer)=ap;
+          A(pointer,pointer-1)=(aw+ae);
+          A(pointer,pointer+n)=an(i,k);
+    end
+end
+ 
+%% T8
+for i=1
+    for j=m
+        pointer=(j-1)*n+i;
+          A(pointer,pointer-n)=as(i,k);
+          A(pointer,pointer)=ap;
+          A(pointer,pointer+1)=(aw+ae);
+          A(pointer,pointer+n)=an(i,k);
+    end
+end
+   %% T9
+for i=n
+    for j=m
+        pointer=(j-1)*n+i;
+          A(pointer,pointer-n)=as(i,k);
+          A(pointer,pointer)=ap;
+          A(pointer,pointer-1)=(aw+ae);
+          A(pointer,pointer+n)=an(i,k);
+    end
+end      
+        pointer=(j-1)*n+i;
+        b(pointer)=f(i,j,k-1);
+        Save A\b
+end
+ 
+Plot(A\b)
+    
+ 
+    (1-((i-1)*dx)^2/4*pi^2)*cos(pi*k)*sin((i-1)*dx);
+        
+ Contour(x,y)
